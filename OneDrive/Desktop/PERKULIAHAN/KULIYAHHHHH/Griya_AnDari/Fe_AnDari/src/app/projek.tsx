@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useRouter, useFocusEffect, useLocalSearchParams } from "expo-router"; // <-- Tambah useLocalSearchParams
 
 // ✅ IMPORT FUNGSI DATABASE LOKAL (SQLite)
 import { ambilSemuaProyek, hapusProyek } from "../db";
@@ -29,6 +29,10 @@ type Project = {
 
 export default function ProjekScreen() {
   const router = useRouter();
+  
+  // Tangkap mode tujuan dari dashboard (2D, 3D, atau RAB).
+  const { mode } = useLocalSearchParams(); 
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -73,7 +77,47 @@ export default function ProjekScreen() {
       const panjang = parseFloat(dimensiSplit[0]?.trim()) || 0;
       const lebar = parseFloat(dimensiSplit[1]?.trim()) || 0;
 
-      // ✅ Lempar ke halaman Grid Denah untuk diedit
+      const payload = {
+        panjangLahan: panjang,
+        lebarLahan: lebar,
+        wallHeight: dataDesain.wallHeight,
+        roofType: dataDesain.roofType,
+        buildingId: "local",
+        projectId: item.id.toString(),
+        regionName:
+          typeof dataDesain.regionName === "string"
+            ? dataDesain.regionName
+            : "",
+        floorId: null,
+        rooms: dataDesain.rooms || [],
+        walls: dataDesain.walls || [],
+        areas: dataDesain.areas || [],
+        lahanPolygon: dataDesain.lahanPolygon || null,
+        bentukLahan: item.tipe.toLowerCase().replace(" ", "-"),
+      };
+
+      if (mode === "rab") {
+        router.push({
+          pathname: "/rab",
+          params: {
+            namaProyek: item.nama_proyek,
+            regionName: payload.regionName,
+            planData: JSON.stringify(payload),
+          },
+        });
+        return;
+      }
+
+      // ✅ JIKA MODE ADALAH 3D, LANGSUNG KE VIEWER 3D
+      if (mode === "3d") {
+        router.push({
+          pathname: "/viewer-3d",
+          params: { data: JSON.stringify(payload) },
+        });
+        return; // Hentikan fungsi di sini agar tidak lanjut ke Grid Denah
+      }
+
+      // ✅ JIKA MODE ADALAH 2D (ATAU TIDAK ADA MODE), KE GRID DENAH
       router.push({
         pathname: "/grid-denah",
         params: {
@@ -88,7 +132,6 @@ export default function ProjekScreen() {
               ? dataDesain.regionName
               : "",
           backendOK: "false",
-          // Data lahan (bentuk, polygon, bbox)
           dataLahan: JSON.stringify({
             bentuk: item.tipe.toLowerCase().replace(" ", "-"),
             panjang: panjang,
@@ -99,7 +142,6 @@ export default function ProjekScreen() {
               ? { minX: 0, minY: 0, maxX: panjang, maxY: lebar }
               : { minX: 0, minY: 0, maxX: panjang || 20, maxY: lebar || 20 },
           }),
-          // Data ruangan, dinding, dan area yang sudah pernah digambar
           savedRooms: JSON.stringify(dataDesain.rooms || []),
           savedWalls: JSON.stringify(dataDesain.walls || []),
           savedAreas: JSON.stringify(dataDesain.areas || []),
@@ -158,7 +200,7 @@ export default function ProjekScreen() {
     <TouchableOpacity
       style={styles.card}
       onPress={() => handlePressProject(item)}
-      onLongPress={() => handleDeleteProject(item)} // ✅ Tekan lama untuk hapus
+      onLongPress={() => handleDeleteProject(item)}
       activeOpacity={0.7}
       delayLongPress={400}
     >
@@ -185,7 +227,13 @@ export default function ProjekScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Proyek Saya</Text>
         <Text style={styles.subtitle}>
-          Riwayat rancangan yang pernah dibuat
+          {mode === "rab"
+            ? "Pilih proyek untuk melihat Estimasi RAB"
+            : mode === "3d" 
+            ? "Pilih proyek untuk melihat Tampilan 3D" 
+            : mode === "2d"
+            ? "Pilih proyek untuk menyusun Denah 2D"
+            : "Riwayat rancangan yang pernah dibuat"}
         </Text>
       </View>
 

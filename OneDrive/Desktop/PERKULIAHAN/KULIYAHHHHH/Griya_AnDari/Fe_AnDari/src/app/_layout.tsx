@@ -10,15 +10,12 @@ import {
 import { Stack, useRouter } from "expo-router";
 
 import * as SplashScreen from "expo-splash-screen";
-import { useFonts } from "expo-font"; // <-- 1. Import useFonts
+import { useFonts } from "expo-font";
 import {
   DeviceEventEmitter,
   useColorScheme,
   StyleSheet,
-  View,
-  ActivityIndicator,
   Animated,
-  Image,
 } from "react-native";
 import { useEffect, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -34,6 +31,9 @@ import {
 import SuperAdminLoginScreen from "../screens/SuperAdminLoginScreen";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Event untuk customer logout
+export const CUSTOMER_LOGOUT_EVENT = "CUSTOMER_LOGOUT_EVENT";
 
 // ============================================
 // CUSTOM THEME
@@ -71,9 +71,8 @@ export default function RootLayout() {
   const router = useRouter();
   const colorScheme = useColorScheme();
 
-  // 2. Tambahkan state untuk memuat font
   const [fontsLoaded, fontError] = useFonts({
-   "StyleScript-Regular": require("@/assets/fonts/StyleScript-Regular.ttf"), // Sesuaikan path dengan lokasi file font Anda
+   "StyleScript-Regular": require("@/assets/fonts/StyleScript-Regular.ttf"),
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -121,7 +120,6 @@ export default function RootLayout() {
       }),
     ]).start();
 
-    // Tampilkan splash sebentar, lalu buka aplikasi setelah animasi selesai.
     setTimeout(() => {
       Animated.timing(fadeAnim, {
         toValue: 0,
@@ -133,26 +131,33 @@ export default function RootLayout() {
     }, 900);
   };
 
-  // 3. Pantau kapan Splash Screen boleh hilang
   useEffect(() => {
-    // Jika animasi splash sudah selesai DAN font sudah termuat (atau error)
     if (!showSplash && (fontsLoaded || fontError)) {
       SplashScreen.hideAsync().catch(() => {});
     }
   }, [showSplash, fontsLoaded, fontError]);
 
+  // Listener untuk Admin dan Customer Logout
   useEffect(() => {
-    const subscription = DeviceEventEmitter.addListener(
+    const adminSub = DeviceEventEmitter.addListener(
       ADMIN_LOGOUT_EVENT,
       () => setAdminToken(null),
     );
-    return () => subscription.remove();
+    // Listener untuk Customer Logout
+    const customerSub = DeviceEventEmitter.addListener(
+      CUSTOMER_LOGOUT_EVENT,
+      () => setToken(null)
+    );
+
+    return () => {
+      adminSub.remove();
+      customerSub.remove();
+    };
   }, []);
 
   // ============================================
-  // RENDER: Splash Screen (Gradasi & Animasi)
+  // RENDER: Splash Screen
   // ============================================
-  // 4. Tambahkan kondisi fontsLoaded & fontError di sini
   if (showSplash || isLoading || (!fontsLoaded && !fontError)) {
     return (
       <LinearGradient
@@ -204,6 +209,7 @@ export default function RootLayout() {
               <LoginScreen
                 onGoToRegister={() => setShowRegister(true)}
                 onGoToAdmin={() => setShowAdminLogin(true)}
+                // Cukup setToken karena saveAuth sudah ditangani oleh services/auth.ts
                 onSuccessLogin={(newToken) => setToken(newToken)}
               />
             )}

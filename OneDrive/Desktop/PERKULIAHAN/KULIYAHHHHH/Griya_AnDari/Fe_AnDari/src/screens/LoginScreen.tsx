@@ -16,8 +16,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import axios from "axios";
-import { API_URL, API_TIMEOUT } from "@/constants/config";
+import { login } from "@/services/auth"; // <-- Import fungsi login dari service
 
 type LoginScreenProps = {
   onGoToRegister: () => void;
@@ -44,32 +43,21 @@ export default function LoginScreen({
     setIsLoading(true);
 
     try {
-      const response = await axios.post(
-        `${API_URL}/login/`, 
-        {
-          email: email.trim(),
-          password: password,
-        },
-        { timeout: API_TIMEOUT }
-      );
+      // Memanggil fungsi login dari services/auth.ts (Mode Simulasi akan berjalan)
+      const response = await login({
+        email: email.trim(),
+        password: password,
+      });
 
-      if (response.data && response.data.token) {
-        onSuccessLogin(response.data.token);
+      if (response && response.token) {
+        onSuccessLogin(response.token);
       } else {
-        throw new Error("Server tidak mengirimkan token.");
+        throw new Error("Gagal mendapatkan token.");
       }
 
     } catch (error: any) {
       let errorMessage = "Terjadi kesalahan saat login.";
-      
-      if (axios.isAxiosError(error)) {
-        errorMessage = error.response?.data?.error || 
-                       error.response?.data?.message || 
-                       "Email atau password salah. Pastikan Anda sudah mendaftar.";
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-
+      if (error?.message) errorMessage = error.message;
       Alert.alert("Login Gagal", errorMessage);
     } finally {
       setIsLoading(false);
@@ -79,11 +67,9 @@ export default function LoginScreen({
   return (
     <View style={styles.container}>
       
-      {/* HEADER BIRU GELAP (Dibalik dari sebelumnya) */}
+      {/* HEADER BIRU GELAP */}
       <SafeAreaView edges={["top"]} style={styles.headerSection}>
         <View style={styles.headerContent}>
-          {/* Catatan: Pastikan file logo ini ada. Jika logo Anda sebelumnya putih, 
-              Anda mungkin perlu menggantinya dengan logo berwarna agar terlihat di background biru */}
           <Image
             source={require("@/assets/images/logo-griya-andari_putih_login.png")} 
             style={styles.logo}
@@ -92,7 +78,7 @@ export default function LoginScreen({
         </View>
       </SafeAreaView>
 
-      {/* FORM PUTIH MELENGKUNG (Dibalik dari sebelumnya) */}
+      {/* FORM PUTIH MELENGKUNG */}
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.formSection}
@@ -185,13 +171,12 @@ export default function LoginScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1A2B4C", // Background utama jadi Biru Gelap
+    backgroundColor: "#1A2B4C",
   },
-  // --- HEADER SECTION (Sekarang Biru) ---
   headerSection: {
     backgroundColor: "#1A2B4C", 
     paddingBottom: 10,
-    paddingTop: 20, // Dikurangi sedikit karena SafeAreaView menangani atas
+    paddingTop: 20,
   },
   headerContent: {
     alignItems: "center", 
@@ -203,10 +188,9 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
   },
-  // --- FORM SECTION (Sekarang Putih) ---
   formSection: {
     flex: 1,
-    backgroundColor: "#FFFFFF", // Kotak Form jadi Putih
+    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     marginTop: 0,
@@ -219,12 +203,12 @@ const styles = StyleSheet.create({
   formTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#1A2B4C", // Teks jadi Biru Gelap
+    color: "#1A2B4C",
     marginBottom: 6,
   },
   formSubtitle: {
     fontSize: 13,
-    color: "#64748B", // Teks abu-abu gelap
+    color: "#64748B",
     marginBottom: 28,
   },
   inputGroup: {
@@ -233,13 +217,13 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#1A2B4C", // Label jadi gelap
+    color: "#1A2B4C",
     marginBottom: 8,
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8FAFC", // Input sedikit abu-abu agar kontras dengan background putih
+    backgroundColor: "#F8FAFC",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#E2E8F0",
@@ -258,7 +242,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   loginButton: {
-    backgroundColor: "#E5A93D", // Tombol tetap Kuning Emas
+    backgroundColor: "#D4AF37",
     borderRadius: 12,
     height: 54,
     flexDirection: "row",
@@ -294,6 +278,6 @@ const styles = StyleSheet.create({
   adminLinkText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#1A2B4C", // Teks admin jadi biru gelap
+    color: "#1A2B4C",
   },
 });

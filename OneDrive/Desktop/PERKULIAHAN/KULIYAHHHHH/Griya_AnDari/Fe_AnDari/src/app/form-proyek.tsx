@@ -636,7 +636,7 @@ export default function FormProyekScreen() {
         bentuk: bentukFinal,
         panjang: panjangFinal,
         lebar: lebarFinal,
-        regionName: selectedRegion.nama,
+        regionName: selectedRegion.nama, // ✅ DATA LOKASI AMAN
         polygon: polygonFinal,
         bbox: bboxFinal,
         luas: luasFinal,
@@ -744,7 +744,7 @@ export default function FormProyekScreen() {
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={styles.iconBoxOrange}>
-                <Ionicons name="shapes-outline" size={16} color="#EA580C" />
+                <Ionicons name="shapes-outline" size={16} color="#d4a242" />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>Bentuk Lahan</Text>
@@ -923,7 +923,7 @@ export default function FormProyekScreen() {
                   <Ionicons
                     name="analytics-outline"
                     size={16}
-                    color="#EA580C"
+                    color="#d4a242"
                   />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -1039,7 +1039,7 @@ export default function FormProyekScreen() {
             <View style={styles.card}>
               <View style={styles.bebasHeader}>
                 <View style={styles.iconBoxOrange}>
-                  <Ionicons name="brush-outline" size={16} color="#EA580C" />
+                  <Ionicons name="brush-outline" size={16} color="#d4a242" />
                 </View>
                 <Text style={styles.bebasTitle}>Gambar Bebas di Grid</Text>
               </View>
@@ -1091,7 +1091,7 @@ export default function FormProyekScreen() {
                 <Ionicons
                   name="list"
                   size={18}
-                  color={selectedRegion ? "#EA580C" : "#94A3B8"}
+                  color={selectedRegion ? "#d4a242" : "#94A3B8"}
                 />
                 <View style={{ marginLeft: 10 }}>
                   <Text
@@ -1219,7 +1219,7 @@ export default function FormProyekScreen() {
                       name="location"
                       size={18}
                       color={
-                        selectedRegion?.id === item.id ? "#EA580C" : "#64748B"
+                        selectedRegion?.id === item.id ? "#d4a242" : "#64748B"
                       }
                     />
                     <View style={{ flex: 1, marginLeft: 10 }}>
@@ -1227,7 +1227,7 @@ export default function FormProyekScreen() {
                         style={[
                           styles.dropdownItemText,
                           selectedRegion?.id === item.id && {
-                            color: "#EA580C",
+                            color: "#d4a242",
                             fontWeight: "700",
                           },
                         ]}
@@ -1447,7 +1447,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
-  bentukBtnActive: { backgroundColor: "#FFF7ED", borderColor: "#EA580C" },
+  bentukBtnActive: { backgroundColor: "#FFF7ED", borderColor: "#d4a242" },
   bentukIconBox: {
     width: 36,
     height: 36,
@@ -1456,9 +1456,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  bentukIconBoxActive: { backgroundColor: "#EA580C" },
+  bentukIconBoxActive: { backgroundColor: "#d4a242" },
   bentukLabel: { fontSize: 12, fontWeight: "800", color: "#334155" },
-  bentukLabelActive: { color: "#EA580C" },
+  bentukLabelActive: { color: "#d4a242" },
   bentukDesc: {
     fontSize: 10,
     color: "#94A3B8",
@@ -1495,7 +1495,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#EA580C",
+    backgroundColor: "#d4a242",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -1546,7 +1546,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  arahBtnActive: { backgroundColor: "#EA580C" },
+  arahBtnActive: { backgroundColor: "#d4a242" },
   sisiDeleteBtn: {
     width: 32,
     height: 32,
@@ -1689,14 +1689,14 @@ const styles = StyleSheet.create({
   },
   btn: {
     marginTop: 16,
-    backgroundColor: "#EA580C",
+    backgroundColor: "#d4a242",
     padding: 16,
     borderRadius: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    shadowColor: "#EA580C",
+    shadowColor: "#d4a242",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -1715,7 +1715,7 @@ const styles = StyleSheet.create({
   mapHeaderBtn: { padding: 4 },
   mapHeaderTitle: { fontSize: 15, fontWeight: "800", color: "#0F172A" },
   mapConfirmBtn: {
-    backgroundColor: "#EA580C",
+    backgroundColor: "#d4a242",
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: 20,

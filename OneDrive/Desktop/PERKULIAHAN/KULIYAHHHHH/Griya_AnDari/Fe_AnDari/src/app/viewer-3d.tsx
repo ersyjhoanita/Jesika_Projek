@@ -1110,30 +1110,32 @@ function Viewer3DContent({ data }: { data?: string }) {
               setSelectedWall(null);
               setActiveElementTab(null);
             }}
-             // ✅ TAMBAHKAN INI:
-  onInteractOpening={(selection) => {
-    setSelectedOpening(selection);
-    // Trigger animasi buka/tutup
-    const id = getOpeningId(selection);
-    let animation = openingAnimations.current.get(id);
-    if (!animation) {
-      animation = new Animated.Value(openingProgressRef.current[id] ?? 0);
-      const listenerId = animation.addListener(({ value }) => {
-        openingProgressRef.current = { ...openingProgressRef.current, [id]: value };
-        setOpeningProgress({ ...openingProgressRef.current });
-      });
-      openingAnimations.current.set(id, animation);
-      openingAnimationListeners.current.set(id, listenerId);
-    }
-    animation.stopAnimation((currentValue) => {
-      Animated.timing(animation!, {
-        toValue: currentValue >= 0.5 ? 0 : 1,
-        duration: 360,
-        useNativeDriver: false,
-      }).start();
-    });
-  }}
-/>
+            onInteractOpening={(selection) => {
+              setSelectedOpening(selection);
+              const id = getOpeningId(selection);
+              let animation = openingAnimations.current.get(id);
+              if (!animation) {
+                animation = new Animated.Value(
+                  openingProgressRef.current[id] ?? 0,
+                );
+                const listenerId = animation.addListener(({ value }) => {
+                  openingProgressRef.current = {
+                    ...openingProgressRef.current,
+                    [id]: value,
+                  };
+                  setOpeningProgress({ ...openingProgressRef.current });
+                });
+                openingAnimations.current.set(id, animation);
+                openingAnimationListeners.current.set(id, listenerId);
+              }
+              animation.stopAnimation((currentValue) => {
+                Animated.timing(animation!, {
+                  toValue: currentValue >= 0.5 ? 0 : 1,
+                  duration: 360,
+                  useNativeDriver: false,
+                }).start();
+              });
+            }}
           />
         </View>
       ) : (

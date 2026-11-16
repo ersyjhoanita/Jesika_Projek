@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   LayoutChangeEvent,
   PanResponder,
   ScrollView,
@@ -18,6 +19,9 @@ import Svg, {
   Stop,
   Text as SvgText,
 } from "react-native-svg";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
+import { Platform } from "react-native";
 
 type DoorType = "swing" | "sliding" | "double_swing";
 type WindowType = "casement" | "sliding" | "awning" | "fixed" | "jalousie";
@@ -122,7 +126,6 @@ const ROOF_OVERHANG = 0.2;
 const ZOOM_MIN = 0.65;
 const ZOOM_MAX = 2.2;
 
-// ✅ Dari Kode 2: tinggi mata & jangkauan interaksi
 const EYE_HEIGHT = 1.6;
 const INTERACT_RADIUS = 2.5;
 
@@ -345,7 +348,12 @@ export const parsePlan3DData = (json: string): Plan3D | null => {
           return [
             {
               id: String(item.id ?? `area-${index}`),
-              name: typeof item.nama === "string" ? item.nama : "Area",
+              name:
+                typeof item.nama === "string"
+                  ? item.nama
+                  : typeof item.name === "string"
+                    ? item.name
+                    : "Area",
               left,
               top,
               right,
@@ -612,7 +620,6 @@ const mergeWallSegments = (segments: WallSegment[]): WallSegment[] => {
   return merged;
 };
 
-// ✅ Dari Kode 2: parameter `firstPerson` untuk render lantai & plafon interior
 const buildFaces = (
   plan: Plan3D,
   showRoof: boolean,
@@ -930,7 +937,7 @@ const buildFaces = (
                 z:
                   zAt(hingeT) +
                   dirZ * distance * Math.cos(windowAngle) +
-                nz * swingSide * Math.abs(distance) * Math.sin(windowAngle),
+                  nz * swingSide * Math.abs(distance) * Math.sin(windowAngle),
               };
             }
             if (windowType === "awning" && y < openingTop) {
@@ -1166,7 +1173,6 @@ const buildFaces = (
     }
   }
 
-  // ✅ Dari Kode 2: lantai & plafon interior saat First Person
   if (firstPerson) {
     for (const room of plan.rooms) {
       faces.push({
@@ -1199,92 +1205,6 @@ const buildFaces = (
     const maxZ = bounds.maxZ + ROOF_OVERHANG;
 
     if (maxX - minX > 0.5 && maxZ - minZ > 0.5) {
-      const addGableRoof = (
-        x1: number,
-        x2: number,
-        z1: number,
-        z2: number,
-        rise: number,
-      ) => {
-        const roofY = plan.wallHeight + rise;
-        if (x2 - x1 >= z2 - z1) {
-          const ridgeZ = (z1 + z2) / 2;
-          faces.push(
-            {
-              points: [
-                { x: x1, y: plan.wallHeight, z: z1 },
-                { x: x2, y: plan.wallHeight, z: z1 },
-                { x: x2, y: roofY, z: ridgeZ },
-                { x: x1, y: roofY, z: ridgeZ },
-              ],
-              color: "url(#roofTiles)",
-            },
-            {
-              points: [
-                { x: x1, y: roofY, z: ridgeZ },
-                { x: x2, y: roofY, z: ridgeZ },
-                { x: x2, y: plan.wallHeight, z: z2 },
-                { x: x1, y: plan.wallHeight, z: z2 },
-              ],
-              color: "url(#roofTiles)",
-            },
-            {
-              points: [
-                { x: x1, y: plan.wallHeight, z: z1 },
-                { x: x1, y: roofY, z: ridgeZ },
-                { x: x1, y: plan.wallHeight, z: z2 },
-              ],
-              color: "#475569",
-            },
-            {
-              points: [
-                { x: x2, y: plan.wallHeight, z: z1 },
-                { x: x2, y: plan.wallHeight, z: z2 },
-                { x: x2, y: roofY, z: ridgeZ },
-              ],
-              color: "#334155",
-            },
-          );
-        } else {
-          const ridgeX = (x1 + x2) / 2;
-          faces.push(
-            {
-              points: [
-                { x: x1, y: plan.wallHeight, z: z1 },
-                { x: x1, y: plan.wallHeight, z: z2 },
-                { x: ridgeX, y: roofY, z: z2 },
-                { x: ridgeX, y: roofY, z: z1 },
-              ],
-              color: "url(#roofTiles)",
-            },
-            {
-              points: [
-                { x: ridgeX, y: roofY, z: z1 },
-                { x: ridgeX, y: roofY, z: z2 },
-                { x: x2, y: plan.wallHeight, z: z2 },
-                { x: x2, y: plan.wallHeight, z: z1 },
-              ],
-              color: "url(#roofTiles)",
-            },
-            {
-              points: [
-                { x: x1, y: plan.wallHeight, z: z1 },
-                { x: ridgeX, y: roofY, z: z1 },
-                { x: x2, y: plan.wallHeight, z: z1 },
-              ],
-              color: "#475569",
-            },
-            {
-              points: [
-                { x: x1, y: plan.wallHeight, z: z2 },
-                { x: x2, y: plan.wallHeight, z: z2 },
-                { x: ridgeX, y: roofY, z: z2 },
-              ],
-              color: "#334155",
-            },
-          );
-        }
-      };
       const addHipRoof = (
         x1: number,
         x2: number,
@@ -1621,7 +1541,6 @@ const buildFaces = (
   return faces;
 };
 
-// ✅ Dari Kode 2: projectPoint dengan camY
 const projectPoint = (
   point: Point3D,
   yaw: number,
@@ -1665,6 +1584,10 @@ const faceCenterDepth = (
   return (dx * sinYaw + dz * cosYaw) * Math.cos(pitch) + dy * Math.sin(pitch);
 };
 
+/**
+ * Render 5 tampak (depan, kanan, belakang, kiri, atas) sebagai SVG string.
+ * Dipakai oleh fitur cetak PDF.
+ */
 export const renderPlan3DViews = (plan: Plan3D) => {
   const angles = [
     { label: "Tampak depan", yaw: 0, pitch: 0 },
@@ -1742,6 +1665,103 @@ export const renderPlan3DViews = (plan: Plan3D) => {
   });
 };
 
+const sanitizeSvgForPrint = (svg: string): string =>
+  svg
+    .replace(/fill="url\(#roofTiles\)"/g, 'fill="#A64B34"')
+    .replace(/fill="url\(#doorWood\)"/g, 'fill="#8B5A2B"')
+    .replace(/fill="url\(#windowGlass\)"/g, 'fill="#B9C9C6"')
+    .replace(/fill="url\(#windowFrame\)"/g, 'fill="#111111"')
+    .replace(/fill="url\(#sceneBackground\)"/g, 'fill="#F8FAFC"')
+    .replace(/fill="url\(#groundSurface\)"/g, 'fill="#DDE5D8"')
+    .replace(/ fill-opacity="[\d.]+"/g, "");
+
+const buildPdfHtml = (plan: Plan3D): string => {
+  const views = renderPlan3DViews(plan);
+  const roofLabel =
+    ROOF_OPTIONS.find((option) => option.type === plan.roofType)?.label ??
+    plan.roofType;
+  const totalArea = plan.rooms.reduce(
+    (sum, room) => sum + room.length * room.width,
+    0,
+  );
+  const cards = views
+    .map(
+      (view) => `
+        <div class="card">
+          <div class="card-title">${view.label}</div>
+          <div class="card-svg">${sanitizeSvgForPrint(view.svg)}</div>
+        </div>`,
+    )
+    .join("");
+  const roomRows = plan.rooms
+    .map(
+      (room, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${room.name}</td>
+          <td>${room.length.toFixed(2)} × ${room.width.toFixed(2)}</td>
+          <td>${(room.length * room.width).toFixed(2)}</td>
+          <td>${room.doors.length}</td>
+          <td>${room.windows.length}</td>
+        </tr>`,
+    )
+    .join("");
+  return `<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8"/><title>Gambar Denah 3D</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;margin:0;padding:24px;color:#0F172A}
+  h1{font-size:22px;margin:0 0 4px;color:#1A2B4C}
+  .subtitle{font-size:12px;color:#64748B;margin:0 0 20px}
+  .meta{display:flex;flex-wrap:wrap;gap:16px;padding:12px 16px;background:#F1F5F9;border-radius:8px;margin-bottom:20px;font-size:12px}
+  .meta div strong{display:block;color:#1A2B4C;font-size:14px}
+  .meta div span{color:#64748B}
+  .grid{display:flex;flex-wrap:wrap;gap:12px}
+  .card{width:calc(50% - 6px);border:1px solid #E2E8F0;border-radius:8px;padding:8px;page-break-inside:avoid}
+  .card-title{font-size:12px;font-weight:700;color:#1A2B4C;margin-bottom:4px}
+  .card-svg svg{width:100%;height:auto;display:block}
+  h2{font-size:15px;color:#1A2B4C;margin:24px 0 8px;border-bottom:2px solid #EA580C;padding-bottom:4px}
+  table{width:100%;border-collapse:collapse;font-size:11px}
+  th,td{border:1px solid #E2E8F0;padding:6px 8px;text-align:left}
+  th{background:#F1F5F9;color:#1A2B4C}
+  tr:nth-child(even) td{background:#F8FAFC}
+  .footer{margin-top:24px;padding-top:12px;border-top:1px solid #E2E8F0;font-size:10px;color:#94A3B8;text-align:center}
+</style></head><body>
+<h1>Gambar Denah 3D</h1>
+<p class="subtitle">Dicetak pada ${new Date().toLocaleString("id-ID")}</p>
+<div class="meta">
+  <div><strong>${plan.landLength.toFixed(2)} × ${plan.landWidth.toFixed(2)} m</strong><span>Ukuran lahan</span></div>
+  <div><strong>${plan.wallHeight.toFixed(2)} m</strong><span>Tinggi dinding</span></div>
+  <div><strong>${roofLabel}</strong><span>Tipe atap</span></div>
+  <div><strong>${plan.rooms.length}</strong><span>Ruangan</span></div>
+  <div><strong>${totalArea.toFixed(2)} m²</strong><span>Total luas bangunan</span></div>
+</div>
+<h2>Tampak Bangunan</h2>
+<div class="grid">${cards}</div>
+<h2>Daftar Ruangan</h2>
+<table><thead><tr><th>#</th><th>Nama</th><th>Dimensi (m)</th><th>Luas (m²)</th><th>Pintu</th><th>Jendela</th></tr></thead>
+<tbody>${roomRows}</tbody></table>
+<div class="footer">AnDari Project · Denah 3D ${plan.landLength} × ${plan.landWidth} m</div>
+</body></html>`;
+};
+
+export const exportPlanToPdf = async (plan: Plan3D): Promise<void> => {
+  const html = buildPdfHtml(plan);
+  if (Platform.OS === "web") {
+    const { uri } = await Print.printToFileAsync({ html });
+    if (typeof window !== "undefined") window.open(uri, "_blank");
+    return;
+  }
+  const { uri } = await Print.printToFileAsync({ html });
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(uri, {
+      mimeType: "application/pdf",
+      dialogTitle: "Simpan / Bagikan PDF Denah 3D",
+      UTI: "com.adobe.pdf",
+    });
+  }
+};
+
 export type OpeningSelection = {
   roomId: string;
   wallIndex?: number;
@@ -1779,7 +1799,6 @@ type Plan3DSceneProps = {
   isFlyover?: boolean;
   onToggleFlyover?: () => void;
   onBackgroundPress?: () => void;
-  /** ✅ Dari Kode 2: interaksi pintu/jendela dari first person */
   onInteractOpening?: (selection: OpeningSelection) => void;
 };
 
@@ -1809,6 +1828,7 @@ export function Plan3DScene({
   const [zoom, setZoom] = useState(1.55);
   const [showRoof, setShowRoof] = useState(forceShowRoof ?? false);
   const [showDimensions, setShowDimensions] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const yawRef = useRef(yaw);
   const pitchRef = useRef(pitch);
   const zoomRef = useRef(zoom);
@@ -1823,15 +1843,8 @@ export function Plan3DScene({
   const pinchStartZoomRef = useRef(1.55);
   const firstPersonDeltaRef = useRef({ dx: 0, dy: 0 });
 
-  const dragStart = useRef({
-    x: 0,
-    y: 0,
-    yaw: 0,
-    pitch: 0,
-  });
-  const lastUpdateRef = useRef(0);
+  const dragStart = useRef({ x: 0, y: 0, yaw: 0, pitch: 0 });
 
-  // ✅ Dari Kode 2: nearby opening
   const [nearbyOpening, setNearbyOpening] = useState<{
     selection: OpeningSelection;
     kind: "door" | "window";
@@ -1839,9 +1852,7 @@ export function Plan3DScene({
     name: string;
   } | null>(null);
 
-  useEffect(() => {
-    zoomRef.current = zoom;
-  }, [zoom]);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
 
   useEffect(() => {
     if (forceShowRoof !== undefined) {
@@ -1852,7 +1863,6 @@ export function Plan3DScene({
     }
   }, [forceShowRoof]);
 
-  // ✅ Reset kamera saat First Person berubah
   useEffect(() => {
     if (isFirstPerson) {
       const bounds = getFootprintBounds(plan);
@@ -1868,7 +1878,6 @@ export function Plan3DScene({
       yawRef.current = 0;
       setPitch(0);
       setYaw(0);
-      // ✅ Dari Kode 1: zoom 3.0 (lebih lebar pandangan)
       setZoom(3.0);
       zoomRef.current = 3.0;
       firstPersonDeltaRef.current = { dx: 0, dy: 0 };
@@ -1948,10 +1957,7 @@ export function Plan3DScene({
   }, [plan.rooms, plan.walls]);
 
   useEffect(() => {
-    if (!isFirstPerson) {
-      setNearbyOpening(null);
-      return;
-    }
+    if (!isFirstPerson) { setNearbyOpening(null); return; }
     let closest: {
       selection: OpeningSelection;
       kind: "door" | "window";
@@ -1979,7 +1985,6 @@ export function Plan3DScene({
     setNearbyOpening(closest);
   }, [isFirstPerson, cameraX, cameraZ, allOpeningTargets]);
 
-  // ✅ PanResponder: gabungan Kode 1 (pinch fix, FP simpel) + Kode 2 (cameraY)
   const responder = useMemo(
     () =>
       PanResponder.create({
@@ -1990,7 +1995,6 @@ export function Plan3DScene({
           Math.abs(gestureState.dx) > 4 ||
           Math.abs(gestureState.dy) > 4,
         onMoveShouldSetPanResponderCapture: () => false,
-
         onPanResponderGrant: (event) => {
           const touches = event.nativeEvent.touches;
           if (touches.length >= 2) {
@@ -2008,11 +2012,8 @@ export function Plan3DScene({
           };
           firstPersonDeltaRef.current = { dx: 0, dy: 0 };
         },
-
         onPanResponderMove: (event) => {
           const touches = event.nativeEvent.touches;
-
-          // Pinch zoom
           if (touches.length >= 2) {
             const distance = Math.hypot(
               touches[0].pageX - touches[1].pageX,
@@ -2032,7 +2033,6 @@ export function Plan3DScene({
             zoomRef.current = nextZoom;
             return;
           }
-
           pinchStartDistanceRef.current = 0;
 
           const currentX = event.nativeEvent.pageX;
@@ -2042,7 +2042,6 @@ export function Plan3DScene({
           const dy = currentY - prev.dy;
           firstPersonDeltaRef.current = { dx: currentX, dy: currentY };
 
-          // First Person: geser = lihat + jalan
           if (isFirstPerson) {
             const yawSpeed = 0.006;
             const nextYaw = yawRef.current + dx * yawSpeed;
@@ -2050,16 +2049,12 @@ export function Plan3DScene({
             setYaw(nextYaw);
 
             const pitchSpeed = 0.004;
-            const nextPitch = Math.max(
-              -0.8,
-              Math.min(0.8, pitchRef.current + dy * pitchSpeed),
-            );
+            const nextPitch = Math.max(-0.8, Math.min(0.8, pitchRef.current + dy * pitchSpeed));
             pitchRef.current = nextPitch;
             setPitch(nextPitch);
 
             const forwardSpeed = 0.012;
             const forward = -dy * forwardSpeed;
-
             const dirX = Math.sin(nextYaw);
             const dirZ = Math.cos(nextYaw);
 
@@ -2068,16 +2063,9 @@ export function Plan3DScene({
 
             const bounds = getFootprintBounds(plan);
             if (bounds) {
-              // ✅ Dari Kode 1: margin 0.3
               const margin = 0.3;
-              newCamX = Math.max(
-                bounds.minX + margin,
-                Math.min(bounds.maxX - margin, newCamX),
-              );
-              newCamZ = Math.max(
-                bounds.minZ + margin,
-                Math.min(bounds.maxZ - margin, newCamZ),
-              );
+              newCamX = Math.max(bounds.minX + margin, Math.min(bounds.maxX - margin, newCamX));
+              newCamZ = Math.max(bounds.minZ + margin, Math.min(bounds.maxZ - margin, newCamZ));
             }
 
             cameraXRef.current = newCamX;
@@ -2087,7 +2075,6 @@ export function Plan3DScene({
             return;
           }
 
-          // Mode normal
           const nextYaw = dragStart.current.yaw + (currentX - dragStart.current.x) * 0.008;
           const nextPitch = Math.max(
             0.2,
@@ -2098,12 +2085,10 @@ export function Plan3DScene({
           setYaw(nextYaw);
           setPitch(nextPitch);
         },
-
         onPanResponderRelease: () => {
           pinchStartDistanceRef.current = 0;
           firstPersonDeltaRef.current = { dx: 0, dy: 0 };
         },
-
         onPanResponderTerminate: () => {
           pinchStartDistanceRef.current = 0;
           firstPersonDeltaRef.current = { dx: 0, dy: 0 };
@@ -2139,8 +2124,7 @@ export function Plan3DScene({
       projected.push({
         points: landPoints.map((point) => projectPoint(point, yaw, pitch, cameraX, cameraY, cameraZ).point),
         depth:
-          faceCenterDepth({ points: landPoints, color: "#E2E8F0" }, yaw, pitch, cameraX, cameraY, cameraZ) -
-          0.01,
+          faceCenterDepth({ points: landPoints, color: "#E2E8F0" }, yaw, pitch, cameraX, cameraY, cameraZ) - 0.01,
         color: "url(#groundSurface)",
       });
       const contactShadow = makeContactShadow(plan);
@@ -2210,6 +2194,62 @@ export function Plan3DScene({
     },
   }));
 
+  const areaTargets = plan.areas.map((area) => ({
+    id: `area:${area.id}`,
+    name: area.name,
+    width: area.right - area.left,
+    length: area.bottom - area.top,
+    position: {
+      x: (area.left + area.right) / 2,
+      y: 0.06,
+      z: (area.top + area.bottom) / 2,
+    },
+  }));
+
+  const wallTargets: {
+    roomName: string;
+    selection: RoomWallSelection;
+    position: Point3D;
+  }[] = [
+    ...plan.rooms.flatMap((room) =>
+      roomEdges(room).map((edge) => ({
+        roomName: room.name,
+        selection: {
+          roomId: room.id,
+          roomName: room.name,
+          edge: edge.edge,
+          length: Math.hypot(edge.x2 - edge.x1, edge.z2 - edge.z1),
+        },
+        position: {
+          x: (edge.x1 + edge.x2) / 2,
+          y: plan.wallHeight / 2,
+          z: (edge.z1 + edge.z2) / 2,
+        },
+      })),
+    ),
+    ...plan.walls.map((wall, wallIndex) => {
+      const dx = wall.x2 - wall.x1;
+      const dz = wall.z2 - wall.z1;
+      const edge: RoomWallSelection["edge"] = Math.abs(dx) >= Math.abs(dz) ? "top" : "right";
+      const roomName = wall.name || `Dinding ${wallIndex + 1}`;
+      return {
+        roomName,
+        selection: {
+          roomId: `wall-${wallIndex}`,
+          wallIndex,
+          roomName,
+          edge,
+          length: Math.hypot(dx, dz),
+        },
+        position: {
+          x: (wall.x1 + wall.x2) / 2,
+          y: plan.wallHeight / 2,
+          z: (wall.z1 + wall.z2) / 2,
+        },
+      };
+    }),
+  ];
+
   const rotateBy = (amount: number) => {
     const nextYaw = yawRef.current + amount;
     yawRef.current = nextYaw;
@@ -2268,9 +2308,20 @@ export function Plan3DScene({
     onInteractOpening?.(nearbyOpening.selection);
   };
 
+  const handleExportPdf = async () => {
+    if (isExportingPdf) return;
+    setIsExportingPdf(true);
+    try {
+      await exportPlanToPdf(plan);
+    } catch (error) {
+      console.error("Gagal mencetak PDF:", error);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
-      {/* TOOLBAR */}
       <View style={styles.toolbarRow}>
         <TouchableOpacity
           style={styles.control}
@@ -2350,6 +2401,17 @@ export function Plan3DScene({
             👁️ {isFirstPerson ? "On" : "Off"}
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.control, isExportingPdf && styles.activeControl]}
+          onPress={handleExportPdf}
+          disabled={isExportingPdf}
+          accessibilityRole="button"
+          accessibilityLabel="Cetak denah ke PDF"
+        >
+          <Text style={[styles.resetText, isExportingPdf && styles.activeControlText]}>
+            {isExportingPdf ? "…" : "📄 PDF"}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.canvas} onLayout={onLayout} {...responder.panHandlers}>
@@ -2397,7 +2459,6 @@ export function Plan3DScene({
                 y: ((point.y - scene.minY) / scene.height) * drawHeight + offsetY,
               }));
               const isRoof = face.color === "url(#roofTiles)";
-
               return (
                 <Polygon
                   key={`face-${index}`}
@@ -2412,7 +2473,6 @@ export function Plan3DScene({
               );
             })}
 
-            {/* ✅ Crosshair First Person */}
             {isFirstPerson && (
               <>
                 <Path
@@ -2449,10 +2509,116 @@ export function Plan3DScene({
                   </React.Fragment>
                 );
               })}
+            {!isFirstPerson && showDimensions && !showRoof &&
+              areaTargets.map((area) => {
+                const point = projectToCanvas(area.position);
+                return (
+                  <React.Fragment key={`area-dimension-${area.id}`}>
+                    <SvgText x={point.x} y={point.y - 7} fill="#000000" fontSize={9} textAnchor="middle">
+                      {area.name}
+                    </SvgText>
+                    <SvgText x={point.x} y={point.y + 9} fill="#000000" fontSize={8} textAnchor="middle">
+                      {`${area.width.toFixed(2)} × ${area.length.toFixed(2)} m`}
+                    </SvgText>
+                  </React.Fragment>
+                );
+              })}
           </Svg>
         )}
 
-        {/* ✅ D-pad First Person: lihat kiri/kanan (yaw) + atas/bawah (pitch) */}
+        {!isFirstPerson && size.width > 0 && size.height > 0 &&
+          markerMode === "door" &&
+          allOpeningTargets
+            .filter(({ selection }) => selection.kind === "door")
+            .map(({ roomName, selection, position }) => {
+              const point = projectToCanvas(position);
+              const selected = selectedOpeningId === openingSelectionId(selection);
+              return (
+                <TouchableOpacity
+                  key={`door-marker-${openingSelectionId(selection)}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Pilih pintu ${roomName}`}
+                  accessibilityState={{ selected }}
+                  activeOpacity={0.75}
+                  onPress={() => onSelectOpening?.(selection)}
+                  style={[
+                    styles.openingHitTarget,
+                    {
+                      left: point.x - 15,
+                      top: point.y - 15,
+                      width: 30,
+                      height: 30,
+                      borderRadius: 15,
+                    },
+                    selected && styles.openingHitTargetSelected,
+                  ]}
+                >
+                  <Text style={[styles.markerText, styles.doorMarkerText]}>P</Text>
+                </TouchableOpacity>
+              );
+            })}
+
+        {!isFirstPerson && size.width > 0 && size.height > 0 &&
+          markerMode === "window" &&
+          allOpeningTargets
+            .filter(({ selection }) => selection.kind === "window")
+            .map(({ roomName, selection, position }) => {
+              const point = projectToCanvas(position);
+              const selected = selectedOpeningId === openingSelectionId(selection);
+              return (
+                <TouchableOpacity
+                  key={`window-marker-${openingSelectionId(selection)}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Pilih jendela ${roomName}`}
+                  accessibilityState={{ selected }}
+                  activeOpacity={0.75}
+                  onPress={() => onSelectOpening?.(selection)}
+                  style={[
+                    styles.openingHitTarget,
+                    styles.windowHitTarget,
+                    {
+                      left: point.x - 15,
+                      top: point.y - 15,
+                      width: 30,
+                      height: 30,
+                      borderRadius: 15,
+                    },
+                    selected && styles.openingHitTargetSelected,
+                  ]}
+                >
+                  <Text style={[styles.markerText, styles.windowMarkerText]}>J</Text>
+                </TouchableOpacity>
+              );
+            })}
+
+        {!isFirstPerson && size.width > 0 && size.height > 0 &&
+          markerMode === "wall" &&
+          wallTargets.map(({ roomName, selection, position }, index) => {
+            const wallId = `${selection.roomId}:${selection.edge}`;
+            const selected = selectedWallId === wallId;
+            const point = projectToCanvas(position);
+            return (
+              <TouchableOpacity
+                key={`wall-marker-${wallId}-${index}`}
+                accessibilityRole="button"
+                accessibilityLabel={`Pilih ${roomName}, panjang ${selection.length.toFixed(2)} meter`}
+                accessibilityState={{ selected }}
+                activeOpacity={0.75}
+                onPress={() => onSelectWall?.(selection)}
+                style={[
+                  styles.wallHitTarget,
+                  {
+                    left: point.x - 15,
+                    top: point.y - 15,
+                  },
+                  selected && styles.wallHitTargetSelected,
+                ]}
+              >
+                <Text style={styles.markerText}>D</Text>
+              </TouchableOpacity>
+            );
+          })}
+
         {isFirstPerson && size.width > 0 && size.height > 0 && (
           <View style={styles.fpDPad}>
             <TouchableOpacity
@@ -2488,7 +2654,6 @@ export function Plan3DScene({
           </View>
         )}
 
-        {/* ✅ Tombol Jalan (First Person) — Dari Kode 2 */}
         {isFirstPerson && size.width > 0 && size.height > 0 && (
           <View style={styles.fpWalkPad}>
             <TouchableOpacity
@@ -2508,7 +2673,6 @@ export function Plan3DScene({
           </View>
         )}
 
-        {/* ✅ Tombol Interaksi pintu/jendela — Dari Kode 2 */}
         {isFirstPerson && nearbyOpening && (
           <TouchableOpacity
             style={styles.interactButton}
@@ -2607,11 +2771,7 @@ const styles = StyleSheet.create({
     borderColor: "#EA580C",
     transform: [{ scale: 1.12 }],
   },
-  canvas: {
-    flex: 1,
-    overflow: "hidden",
-    backgroundColor: "#F8FAFC",
-  },
+  canvas: { flex: 1, overflow: "hidden", backgroundColor: "#F8FAFC" },
   hint: {
     position: "absolute",
     bottom: 14,
@@ -2622,7 +2782,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(15, 23, 42, 0.72)",
   },
   hintText: { color: "#FFFFFF", fontSize: 11, textAlign: "center" },
-
   fpDPad: {
     position: "absolute",
     bottom: 90,
@@ -2641,7 +2800,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   fpButtonText: { color: "#FFFFFF", fontSize: 18, fontWeight: "700" },
-
   fpWalkPad: {
     position: "absolute",
     bottom: 90,
@@ -2659,7 +2817,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   fpWalkButtonText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
-
   interactButton: {
     position: "absolute",
     bottom: 160,

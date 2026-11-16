@@ -1,29 +1,30 @@
-// src/app/index.tsx  (GABUNGAN)
+// src/app/index.tsx
 
 import React, { useState, useRef } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Platform, Linking, Modal, Image, Animated, Alert,
+  View, Text, StyleSheet, TouchableOpacity,
+  Platform, Linking, Modal, Image, Animated, Alert, DeviceEventEmitter,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { logout } from "@/services/auth";
+import { CUSTOMER_LOGOUT_EVENT } from "./_layout";
 
 // ============================================
 // DATA ALUR APLIKASI
 // ============================================
 const ALUR_APLIKASI = [
   { id: "01", title: "Luas Tanah", desc: "Atur lebar, panjang, bentuk lahan, dan lokasi.", icon: "home-outline", route: "/form-proyek", color: "#F59E0B" },
-  { id: "02", title: "Denah 2D", desc: "Susun tata letak ruangan di atas grid meter.", icon: "grid-outline", route: "/grid-denah", color: "#3B82F6" },
-  { id: "03", title: "Tampilan 3D", desc: "Lihat visualisasi bentuk rumah dari berbagai sisi.", icon: "cube-outline", route: "/viewer-3d", color: "#8B5CF6" },
-  { id: "04", title: "Estimasi Anggaran", desc: "Lihat perkiraan total biaya dan harga material untuk hasil desainmu.", icon: "calculator-outline", route: "/(tabs)/projek", color: "#10B981" },
+  { id: "02", title: "Denah 2D", desc: "Pilih proyek untuk menyusun tata letak ruangan di atas grid meter.", icon: "grid-outline", route: "/projek", color: "#3B82F6" },
+  { id: "03", title: "Tampilan 3D", desc: "Pilih proyek untuk melihat visualisasi bentuk rumah dari berbagai sisi.", icon: "cube-outline", route: "/projek", color: "#8B5CF6" },
+  { id: "04", title: "Estimasi Anggaran", desc: "Lihat perkiraan total biaya dan harga material untuk hasil desainmu.", icon: "calculator-outline", route: "/projek", color: "#10B981" },
 ];
 
 const TEAM_MEMBERS = [
-  { name: "Intan Fadlilah", role: "UI/UX Designer", color: "#3B82F6", email: "mailto:intan@example.com", instagram: "https://instagram.com/intan", linkedin: "https://linkedin.com/in/intan", github: "https://github.com/intan" },
-  { name: "Setiawan Rizki P.W.", role: "Frontend Developer", color: "#F59E0B", email: "mailto:setiawan@example.com", instagram: "https://instagram.com/setiawan", linkedin: "https://linkedin.com/in/setiawan", github: "https://github.com/setiawan" },
-  { name: "Yoanita Ersyputri", role: "Backend Developer", color: "#10B981", email: "mailto:yoanita@example.com", instagram: "https://instagram.com/yoanita", linkedin: "https://linkedin.com/in/yoanita", github: "https://github.com/yoanita" },
+  { name: "Intan Fadlilah", role: "Frontend Developer", color: "#3B82F6", email: "mailto:intan@example.com", instagram: "https://instagram.com/intan", linkedin: "https://linkedin.com/in/intan", github: "https://github.com/intan" },
+  { name: "Setiawan Rizki P.W.", role: "Backend Developer", color: "#F59E0B", email: "mailto:setiawan@example.com", instagram: "https://instagram.com/setiawan", linkedin: "https://linkedin.com/in/setiawan", github: "https://github.com/setiawan" },
+  { name: "Yoanita Ersyputri", role: "Frontend Developer", color: "#10B981", email: "mailto:ersy8731@gmail.com", instagram: "https://instagram.com/yoanita", linkedin: "https://linkedin.com/in/yoanita", github: "https://github.com/yoanita" },
 ];
 
 export default function HomeScreen() {
@@ -65,22 +66,56 @@ export default function HomeScreen() {
       {
         text: "Keluar",
         style: "destructive",
-        onPress: () => {
+        onPress: async () => {
           setIsLoggingOut(true);
-          void logout()
-            .catch((error: unknown) => {
-              console.error("Gagal logout:", error);
-              Alert.alert("Logout gagal", "Sesi belum dapat dihapus. Silakan coba lagi.");
-            })
-            .finally(() => setIsLoggingOut(false));
+          try {
+            await logout();
+            DeviceEventEmitter.emit(CUSTOMER_LOGOUT_EVENT); 
+          } catch (error) {
+            console.error("Gagal logout:", error);
+            Alert.alert("Logout gagal", "Sesi belum dapat dihapus. Silakan coba lagi.");
+          } finally {
+            setIsLoggingOut(false);
+          }
         },
       },
     ]);
   };
 
+  // ============================================
+  // FUNGSI: Menangani Klik pada Kartu Alur
+  // ============================================
+  const handleCardPress = (item: typeof ALUR_APLIKASI[0]) => {
+    // ✅ ALUR BARU (AKTIF): Semua menu langsung ke Form Proyek
+    if (item.id === "02" || item.id === "03" || item.id === "04") {
+      router.push("/form-proyek");
+    } else {
+      router.push(item.route as any);
+    }
+
+    // =====================================================================
+    // ⚠️ ALUR LAMA (HAPUS TANDA // DI BAWAH UNTUK MENGAKTIFKAN KEMBALI)
+    // Jika kamu ingin mengembalikan alur memilih proyek terlebih dahulu, 
+    // hapus tanda // di setiap baris kode lama ini, dan hapus/blok kode "ALUR BARU" di atas.
+    // =====================================================================
+    // if (item.id === "02") {
+    //   // Denah 2D: Arahkan ke projek dengan mode 2d
+    //   router.push("/projek?mode=2d" as any);
+    // } else if (item.id === "03") {
+    //   // Pilih proyek terlebih dahulu, lalu buka viewer 3D dari proyek terpilih.
+    //   router.push("/projek?mode=3d" as any);
+    // } else if (item.id === "04") {
+    //   // Pilih proyek terlebih dahulu, lalu hitung estimasi RAB proyek tersebut.
+    //   router.push("/projek?mode=rab" as any);
+    // } else {
+    //   // Menu lain (1)
+    //   router.push(item.route as any);
+    // }
+  };
+
   return (
     <View style={styles.container}>
-          {/* ============ HEADER FLOATING ============ */}
+      {/* ============ HEADER FLOATING ============ */}
       <Animated.View style={[styles.floatingHeader, { backgroundColor: headerBackgroundColor }]}>
         <SafeAreaView edges={["top"]}>
           <View style={styles.headerContent}>
@@ -90,7 +125,7 @@ export default function HomeScreen() {
                 style={styles.headerLogo}
                 resizeMode="contain"
               />
-                           <View style={styles.textScriptWrapper}>
+              <View style={styles.textScriptWrapper}>
                 <Animated.Text style={[styles.textScriptGriya, { color: textGriyaColor }]}>
                   Griya{" "}
                 </Animated.Text>
@@ -107,7 +142,7 @@ export default function HomeScreen() {
               accessibilityLabel="Keluar dari akun"
             >
               <Animated.Text style={{ color: iconColor }}>
-                <Ionicons name="log-out-outline" size={22} color="#E5A93D" />
+                <Ionicons name="log-out-outline" size={22} color="#D4AF37" />
               </Animated.Text>
             </TouchableOpacity>
           </View>
@@ -130,7 +165,7 @@ export default function HomeScreen() {
           <View style={styles.decorCircle2} />
           <View style={styles.heroContent}>
             <Text style={styles.heroTitle}>
-              Desain Rumahmu,{"\n"}Hitung Estimasi{" "}
+              Desain Rumahmu dan{"\n"}Hitung Estimasi{" "}
               <Text style={styles.heroHighlight}>RAB</Text>-nya!
             </Text>
             <Text style={styles.heroDescription}>
@@ -157,7 +192,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 key={item.id}
                 style={styles.card}
-                onPress={() => router.push(item.route as any)}
+                onPress={() => handleCardPress(item)}
                 activeOpacity={0.8}
               >
                 <View style={[styles.iconContainer, { backgroundColor: `${item.color}15` }]}>
@@ -175,20 +210,9 @@ export default function HomeScreen() {
               </TouchableOpacity>
             ))}
           </View>
-
-          {/* Admin access (dari File 2) */}
-          <TouchableOpacity
-            accessibilityRole="button"
-            style={styles.adminAccess}
-            onPress={() => router.push("/super-admin")}
-          >
-            <Ionicons name="shield-checkmark-outline" size={19} color="#C2410C" />
-            <Text style={styles.adminAccessText}>Masuk dashboard super admin</Text>
-            <Ionicons name="chevron-forward" size={18} color="#C2410C" />
-          </TouchableOpacity>
         </View>
 
-        {/* FOOTER MINIMALIS (dari File 2) */}
+        {/* FOOTER MINIMALIS */}
         <View style={styles.footerSection}>
           <Text style={styles.supportedTitle}>Didukung Oleh</Text>
           <View style={styles.logoRow}>
@@ -215,7 +239,7 @@ export default function HomeScreen() {
         </View>
       </Animated.ScrollView>
 
-       {/* ============ BOTTOM NAV (DIPERBARUI) ============ */}
+      {/* ============ BOTTOM NAV ============ */}
       <View style={styles.bottomNavBar}>
         <TouchableOpacity
           style={styles.bottomNavItem}
@@ -236,7 +260,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ============ MODAL TIM (dari File 2) ============ */}
+      {/* ============ MODAL TIM ============ */}
       <Modal
         visible={isTeamModalVisible}
         transparent
@@ -294,44 +318,31 @@ export default function HomeScreen() {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
-  scrollContent: { paddingBottom: 120 },  // dari File 1: ruang untuk bottom nav
+  scrollContent: { paddingBottom: 120 }, 
 
-  // === Header floating (File 2) ===
+  // === Header floating ===
   floatingHeader: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 100 },
   headerContent: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 24, paddingTop: 12, paddingBottom: 12 },
   headerLeft: { flexDirection: "row", alignItems: "center" },
   headerLogo: { width: 40, height: 40, marginRight: 8 },
-    textScriptWrapper: { 
-    flexDirection: "row", // Ubah dari "column" ke "row" agar menyamping
-    alignItems: "center", // Agar tulisan sejajar secara vertikal
-    marginLeft: 8,        // Jarak antara logo dan tulisan
-  },
-  textScriptGriya: { 
-    fontSize: 28,         // Sesuaikan ukuran font
-    fontFamily: "StyleScript-Regular", 
-    lineHeight: 34, 
-    // marginBottom: -10,  <-- HAPUS BARIS INI
-  },
-  textScriptAnDari: { 
-    fontSize: 28,         // Samakan ukuran dengan Griya
-    color: "#D4A017", 
-    fontFamily: "StyleScript-Regular", 
-    lineHeight: 34, 
-  },
+  textScriptWrapper: { flexDirection: "row", alignItems: "center", marginLeft: 8 },
+  textScriptGriya: { fontSize: 20, fontFamily: "StyleScript-Regular", lineHeight: 34 },
+  textScriptAnDari: { fontSize: 20, color: "#D4AF37", fontFamily: "StyleScript-Regular", lineHeight: 34 },
   iconButton: { padding: 8, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 12 },
 
-  // === Hero (keduanya sama) ===
+  // === Hero ===
   heroSection: { backgroundColor: "#1A2B4C", borderBottomLeftRadius: 32, borderBottomRightRadius: 32, paddingTop: 100, paddingBottom: 40, overflow: "hidden", position: "relative" },
   decorCircle1: { position: "absolute", top: -50, right: -50, width: 200, height: 200, borderRadius: 100, backgroundColor: "rgba(255,255,255,0.05)" },
   decorCircle2: { position: "absolute", bottom: -80, left: -40, width: 250, height: 250, borderRadius: 125, backgroundColor: "rgba(245, 166, 35, 0.08)" },
   heroContent: { paddingHorizontal: 24, paddingTop: 8 },
-  heroTitle: { color: "#FFFFFF", fontSize: 30, fontWeight: "800", lineHeight: 38, marginBottom: 12, letterSpacing: -0.5 },
-  heroHighlight: { color: "#F5A623" },
+  heroTitle: { color: "#FFFFFF", fontSize: 25, fontWeight: "800", lineHeight: 38, marginBottom: 12, letterSpacing: -0.5 },
+  heroHighlight: { color: "#D4AF37" },
   heroDescription: { color: "#CBD5E1", fontSize: 14, lineHeight: 22, maxWidth: "95%" },
 
-  // === Section (keduanya sama) ===
+  // === Section ===
   sectionContainer: { paddingHorizontal: 24, paddingTop: 28 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
   sectionTitle: { fontSize: 22, fontWeight: "800", color: "#0F172A", letterSpacing: -0.5 },
@@ -339,7 +350,7 @@ const styles = StyleSheet.create({
   stepBadgeText: { fontSize: 11, fontWeight: "700", color: "#92400E" },
   sectionSubtitle: { fontSize: 13, color: "#64748B", marginBottom: 20 },
 
-  // === Cards (keduanya sama) ===
+  // === Cards ===
   cardsContainer: { gap: 12 },
   card: { backgroundColor: "#FFFFFF", borderRadius: 20, padding: 16, flexDirection: "row", alignItems: "center", shadowColor: "#0F172A", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 3, borderWidth: 1, borderColor: "#F1F5F9" },
   iconContainer: { width: 52, height: 52, borderRadius: 16, alignItems: "center", justifyContent: "center", marginRight: 14 },
@@ -349,11 +360,11 @@ const styles = StyleSheet.create({
   cardDesc: { fontSize: 12, color: "#64748B", lineHeight: 18 },
   chevronContainer: { width: 32, height: 32, borderRadius: 10, backgroundColor: "#F8FAFC", alignItems: "center", justifyContent: "center", marginLeft: 8 },
 
-  // === Admin access (File 2) ===
+  // === Admin access ===
   adminAccess: { marginTop: 16, minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: "#FED7AA", backgroundColor: "#FFF7ED" },
   adminAccessText: { color: "#C2410C", fontSize: 13, fontWeight: "700" },
 
-  // === Footer minimalis (File 2) ===
+  // === Footer minimalis ===
   footerSection: { paddingHorizontal: 24, paddingTop: 32, paddingBottom: 10, alignItems: "center" },
   supportedTitle: { fontSize: 13, fontWeight: "600", color: "#64748B", marginBottom: 16 },
   logoRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 32, marginBottom: 24 },
@@ -362,38 +373,21 @@ const styles = StyleSheet.create({
   teamButtonText: { fontSize: 12, fontWeight: "600", color: "#64748B" },
   copyright: { textAlign: "center", fontSize: 11, color: "#94A3B8", fontWeight: "500" },
 
-  // === Bottom Nav (File 1) ===
-    // === Bottom Nav (Diperbarui sesuai gambar) ===
+  // === Bottom Nav ===
   bottomNavBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "#FFFFFF", // Background putih penuh
-    flexDirection: "row",
-    justifyContent: "space-around", // Membagi rata kiri dan kanan
-    alignItems: "center",
-    paddingTop: 12,
-    paddingBottom: Platform.OS === "ios" ? 28 : 16, // Menyesuaikan safe area iPhone
-    borderTopWidth: 1,
-    borderTopColor: "#F1F5F9", // Garis tipis di atas nav
-    elevation: 8, // Shadow untuk Android
-    shadowColor: "#000", // Shadow untuk iOS
+    position: "absolute", bottom: 0, left: 0, right: 0,
+    backgroundColor: "#FFFFFF", flexDirection: "row",
+    justifyContent: "space-around", alignItems: "center",
+    paddingTop: 12, paddingBottom: Platform.OS === "ios" ? 28 : 16, 
+    borderTopWidth: 1, borderTopColor: "#F1F5F9", 
+    elevation: 8, shadowColor: "#000", 
     shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowOpacity: 0.05, shadowRadius: 5,
   },
-  bottomNavItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    flex: 1, // Agar tiap item mengambil setengah lebar layar
-  },
-  bottomNavText: {
-    fontSize: 11,
-    fontWeight: "700",
-    marginTop: 4,
-  },
-  // === Modal (File 2) ===
+  bottomNavItem: { alignItems: "center", justifyContent: "center", flex: 1 },
+  bottomNavText: { fontSize: 11, fontWeight: "700", marginTop: 4 },
+  
+  // === Modal ===
   modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(15, 23, 42, 0.5)" },
   modalContent: { backgroundColor: "#FFFFFF", borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 24, paddingTop: 12, paddingBottom: 32 },
   modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: "#E2E8F0", alignSelf: "center", marginBottom: 20 },

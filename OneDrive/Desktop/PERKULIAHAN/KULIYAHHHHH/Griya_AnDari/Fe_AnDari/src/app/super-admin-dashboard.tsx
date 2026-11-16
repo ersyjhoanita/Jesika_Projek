@@ -797,7 +797,7 @@ const styles = StyleSheet.create({
   },
   textScriptAnDari: {
     fontSize: 24,
-    color: "#D4A017",
+    color: "#CBB67A",
     fontFamily: "StyleScript-Regular",
     lineHeight: 26,
   },

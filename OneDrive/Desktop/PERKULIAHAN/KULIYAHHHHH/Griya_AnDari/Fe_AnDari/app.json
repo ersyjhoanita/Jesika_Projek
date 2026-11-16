@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Griya AnDari",
-    "slug": "griya-andari",
+    "slug": "Griya AnDari",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo-griya-andari.png",
@@ -15,8 +15,7 @@
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/logo-griya-andari.png"
       },
-      "predictiveBackGestureEnabled": false,
-      "package": "com.ersy8731.griyaandari"
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static"
@@ -32,21 +31,11 @@
         }
       ],
       "expo-font",
-      "expo-dev-client"
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    },
-    "extra": {
-      "router": {
-        "asyncRoutes": {
-          "web": true
-        }
-      },
-      "eas": {
-        "projectId": "8e95e250-b3e9-41fc-a6ae-ac623b758175"
-      }
     }
   }
 }
